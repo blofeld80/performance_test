@@ -42,7 +42,7 @@ source "$VENV_DIR/bin/activate"
 
 pip install --upgrade pip
 pip install west
-
+pip install matplotlib
 # -----------------------------
 # Determine SDK version and minimal archive
 # -----------------------------
