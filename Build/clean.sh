@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+BUILD_ROOT="$ROOT_DIR/.build"
 
-echo "Removing all Zephyr workspaces"
-rm -rf "${ROOT_DIR}/workspaces"
+if [[ -d "$BUILD_ROOT" ]]; then
+    echo "==> Removing all build artifacts in $BUILD_ROOT"
+    rm -rf "$BUILD_ROOT"
+fi
 
-echo "Clean complete"
+# Remove prj.conf copied to Device/
+if [[ -f "$ROOT_DIR/Device/prj.conf" ]]; then
+    rm -f "$ROOT_DIR/Device/prj.conf"
+fi
+
+echo "Clean complete."

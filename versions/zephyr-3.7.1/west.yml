@@ -1,0 +1,25 @@
+manifest:
+  version: 0.11
+
+  defaults:
+    remote: github
+    revision: v3.7.1
+
+  remotes:
+    - name: github
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      path: zephyr
+      revision: v3.7.1
+
+  self:
+    path: zephyr
+
+# Only import the needed modules: cmsis + hal_stm32
+import:
+  name: https://github.com/zephyrproject-rtos/zephyr/blob/v3.7.1/west.yml
+  name-allowlist:
+    - cmsis
+    - hal_stm32

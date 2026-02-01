@@ -1,72 +1,96 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-ZEPHYR_VERSION="$1"
-
-if [ -z "$ZEPHYR_VERSION" ]; then
-  echo "Usage: ./init.sh <zephyr-version>"
-  exit 1
+# -----------------------------
+# Check version
+# -----------------------------
+if [[ -z "${ZEPHYR_VERSION:-}" ]]; then
+    echo "Error: ZEPHYR_VERSION not set."
+    echo "Example: export ZEPHYR_VERSION=4.2"
+    exit 1
 fi
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${ROOT_DIR}/workspaces/${ZEPHYR_VERSION}"
-VENV_DIR="${WORK_DIR}/venv"
-MANIFEST="${ROOT_DIR}/west-manifests/zephyr-${ZEPHYR_VERSION}.yml"
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+BUILD_DIR="$ROOT_DIR/.build/$ZEPHYR_VERSION"
+VENV_DIR="$BUILD_DIR/venv"
+SDK_DIR="$BUILD_DIR/sdk"
+WEST_WS="$BUILD_DIR/west"
 
-if [ ! -f "${MANIFEST}" ]; then
-  echo "Missing manifest: ${MANIFEST}"
-  exit 1
+# -----------------------------
+# Exit if workspace already exists
+# -----------------------------
+if [[ -d "$WEST_WS/.west" ]]; then
+    echo "Zephyr $ZEPHYR_VERSION workspace already initialized at $WEST_WS"
+    exit 0
 fi
 
-mkdir -p "${WORK_DIR}"
-cd "${WORK_DIR}"
+mkdir -p "$BUILD_DIR"
 
-echo "=== init: Zephyr ${ZEPHYR_VERSION} ==="
+# -----------------------------
+# Python virtualenv per version
+# -----------------------------
+echo "==> Creating virtualenv at $VENV_DIR"
+python3 -m venv "$VENV_DIR"
+source "$VENV_DIR/bin/activate"
 
-# Python venv
-if [ ! -d "${VENV_DIR}" ]; then
-  echo "Creating Python virtual environment"
-  python3 -m venv venv
-  source venv/bin/activate
-  pip install --upgrade pip
-  pip install west
+pip install --upgrade pip
+pip install west
+
+# -----------------------------
+# Download ARM-only SDK (or full SDK for 3.7.1)
+# -----------------------------
+case "$ZEPHYR_VERSION" in
+  3.7.1)
+      SDK_VERSION=0.16.8
+      SDK_ARCHIVE="zephyr-sdk-${SDK_VERSION}_linux-x86_64.tar.xz"
+      ;;
+  4.*)
+      SDK_VERSION=0.17.0
+      SDK_ARCHIVE="zephyr-sdk-${SDK_VERSION}-arm-zephyr-eabi_linux-x86_64.tar.xz"
+      ;;
+  *)
+      echo "Unsupported version $ZEPHYR_VERSION"
+      exit 1
+      ;;
+esac
+
+SDK_URL="https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${SDK_VERSION}/${SDK_ARCHIVE}"
+
+if [[ ! -d "$SDK_DIR" || ! -f "$SDK_DIR/.installed" ]]; then
+    echo "==> Downloading Zephyr SDK $SDK_VERSION"
+    mkdir -p "$SDK_DIR"
+    curl -L "$SDK_URL" -o "$BUILD_DIR/$SDK_ARCHIVE"
+
+    echo "==> Extracting SDK"
+    tar -xJf "$BUILD_DIR/$SDK_ARCHIVE" -C "$SDK_DIR" --strip-components=1
+
+    touch "$SDK_DIR/.installed"
 else
-  source venv/bin/activate
+    echo "SDK already installed at $SDK_DIR"
 fi
 
-# West workspace
-if [ ! -d "${WORK_DIR}/.west" ]; then
-  echo "Initializing west workspace"
-  west init -m "${MANIFEST}"
-  west update
-else
-  echo "West workspace already initialized"
-fi
-
-# Python requirements
-pip install -r zephyr/scripts/requirements.txt >/dev/null
-
-# Zephyr SDK
-SDK_VERSION=$(grep -E "ZEPHYR_SDK_VERSION" zephyr/CMakeLists.txt | sed -E 's/.*\"(.*)\"/\1/')
-SDK_DIR="${WORK_DIR}/zephyr-sdk-${SDK_VERSION}"
-
-if [ ! -d "${SDK_DIR}" ]; then
-  echo "Installing Zephyr SDK ${SDK_VERSION}"
-  wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v${SDK_VERSION}/zephyr-sdk-${SDK_VERSION}_linux-x86_64.tar.gz
-  tar xf zephyr-sdk-${SDK_VERSION}_linux-x86_64.tar.gz
-  "${SDK_DIR}/setup.sh" -h -c
-else
-  echo "Zephyr SDK already installed"
-fi
-
-# Environment file
-ENV_FILE="${WORK_DIR}/env.sh"
-if [ ! -f "${ENV_FILE}" ]; then
-  cat <<EOF > "${ENV_FILE}"
 export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
-export ZEPHYR_SDK_INSTALL_DIR=${SDK_DIR}
-export ZEPHYR_BASE=${WORK_DIR}/zephyr
-EOF
+export ZEPHYR_SDK_INSTALL_DIR="$SDK_DIR"
+
+# -----------------------------
+# Initialize West workspace
+# -----------------------------
+mkdir -p "$WEST_WS"
+cd "$WEST_WS"
+
+west init -l "$ROOT_DIR/versions/zephyr-$ZEPHYR_VERSION"
+west update
+west zephyr-export
+
+# -----------------------------
+# Install Zephyr Python dependencies for this version
+# -----------------------------
+REQ_FILE="$WEST_WS/zephyr/scripts/requirements.txt"
+if [[ -f "$REQ_FILE" ]]; then
+    echo "==> Installing Zephyr Python requirements for $ZEPHYR_VERSION"
+    pip install -r "$REQ_FILE"
+else
+    echo "Warning: requirements.txt not found in $REQ_FILE"
 fi
 
-echo "=== init complete ==="
+echo "==> Workspace initialized at $WEST_WS"

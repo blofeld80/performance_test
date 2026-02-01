@@ -1,35 +1,31 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-ZEPHYR_VERSION="$1"
-
-if [ -z "$ZEPHYR_VERSION" ]; then
-  echo "Usage: ./build.sh <zephyr-version>"
-  exit 1
+if [[ -z "${ZEPHYR_VERSION:-}" ]]; then
+    echo "Error: ZEPHYR_VERSION not set"
+    exit 1
 fi
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="${ROOT_DIR}/workspaces/${ZEPHYR_VERSION}"
-APP_DIR="${ROOT_DIR}/../Device"
-BUILD_DIR="${WORK_DIR}/build"
-PRJ_CONF="${ROOT_DIR}/prj-conf/${ZEPHYR_VERSION}.conf"
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+VERSION_DIR="$ROOT_DIR/versions/zephyr-$ZEPHYR_VERSION"
+BUILD_DIR="$ROOT_DIR/.build/$ZEPHYR_VERSION"
+WEST_WS="$BUILD_DIR/west"
+DEVICE_DIR="$ROOT_DIR/Device"
 
-if [ ! -f "${PRJ_CONF}" ]; then
-  echo "Missing prj.conf: ${PRJ_CONF}"
-  exit 1
-fi
+# Check required files
+[[ -f "$VERSION_DIR/west.yml" ]] || { echo "Missing west.yml"; exit 1; }
+[[ -f "$VERSION_DIR/prj.conf" ]] || { echo "Missing prj.conf"; exit 1; }
 
-# Ensure environment exists
-"${ROOT_DIR}/init.sh" "${ZEPHYR_VERSION}"
+# Ensure workspace initialized
+"$ROOT_DIR/Build/init.sh"
 
-cd "${WORK_DIR}"
-source venv/bin/activate
-source env.sh
+# Activate venv
+source "$BUILD_DIR/venv/bin/activate"
 
-west build \
-  -b nucleo_f767zi \
-  -s "${APP_DIR}" \
-  -d "${BUILD_DIR}" \
-  --pristine \
-  -- \
-  -DCONF_FILE="${PRJ_CONF}"
+# Copy version-specific west.yml and prj.conf
+cp "$VERSION_DIR/west.yml" "$WEST_WS/west.yml"
+cp "$VERSION_DIR/prj.conf" "$DEVICE_DIR/prj.conf"
+
+# Build
+cd "$WEST_WS"
+west build -b nucleo_f767zi "$DEVICE_DIR"

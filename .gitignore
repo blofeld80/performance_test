@@ -6,6 +6,8 @@ Build/workspaces/
 # west internal state (extra safety)
 .west/
 
+.build/
+
 # =========================
 # Zephyr SDK / toolchains
 # =========================
