@@ -1,0 +1,72 @@
+# =========================
+# Zephyr / west workspaces
+# =========================
+Build/workspaces/
+
+# west internal state (extra safety)
+.west/
+
+# =========================
+# Zephyr SDK / toolchains
+# =========================
+zephyr-sdk-*/
+toolchains/
+
+# =========================
+# Python virtual environments
+# =========================
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# =========================
+# Build artifacts
+# =========================
+build/
+*/build/
+*.elf
+*.hex
+*.bin
+*.map
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# =========================
+# Zephyr generated files
+# =========================
+zephyr/zephyr.elf
+zephyr/zephyr.map
+zephyr/zephyr.hex
+zephyr/zephyr.bin
+zephyr/include/generated/
+zephyr/.config
+zephyr/.config.old
+zephyr/.cmake.cache
+
+# =========================
+# Editor / IDE junk
+# =========================
+.vscode/
+.idea/
+*.swp
+*~
+
+# =========================
+# OS-specific
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs & reports
+# =========================
+*.log
+*.csv
+*.json
