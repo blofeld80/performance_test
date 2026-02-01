@@ -54,7 +54,7 @@ mkdir -p "$RELEASE_DIR"
 # -----------------------------
 # Copy artifacts to Release
 # -----------------------------
-BUILD_OUT="$BUILD_DIR/build"
+BUILD_OUT="$BUILD_DIR/west/build"
 
 
 cp "$BUILD_OUT/zephyr/zephyr.elf" "$RELEASE_DIR/zephyr-$ZEPHYR_VERSION.elf"

@@ -27,4 +27,4 @@ for VER in "${VERSIONS[@]}"; do
     unset ZEPHYR_SDK_INSTALL_DIR
 done
 
-echo "All builds complete. Release folder: $RELEASE_DIR"
+echo "All builds complete."
