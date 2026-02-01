@@ -34,6 +34,9 @@ build/
 *.bin
 *.map
 
+#Downloads
+Build/sdk_tarballs/
+
 # CMake
 CMakeCache.txt
 CMakeFiles/
@@ -72,3 +75,5 @@ Thumbs.db
 *.log
 *.csv
 *.json
+
+Device/prj.conf
